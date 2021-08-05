@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.nianhua.dao.QqTelDAO">
+    <resultMap id="BaseResultMap" type="com.nianhua.model.QqTel">
+        <id column="qq" jdbcType="BIGINT" property="qq"/>
+        <result column="tel" jdbcType="VARCHAR" property="tel"/>
+    </resultMap>
+    <insert id="add" parameterType="com.nianhua.model.QqTel">
+      insert into qq_tel(qq,tel) values (#{qq},#{tel})
+    </insert>
+    <select id="getEndQQ" resultMap="BaseResultMap">
+    SELECT *  FROM qq_tel ORDER BY qq DESC LIMIT 1
+    </select>
+    <insert id="addList" parameterType="java.util.List">
+        insert into qq_tel(qq,tel)
+        values
+        <foreach collection="lists" item="it" separator=",">
+            (#{it.qq},#{it.tel})
+        </foreach>
+    </insert>
+</mapper>
