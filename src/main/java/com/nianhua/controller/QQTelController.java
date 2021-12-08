@@ -1,5 +1,6 @@
 package com.nianhua.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import com.nianhua.entity.ResultVo;
 import com.nianhua.model.QqTel;
 import com.nianhua.service.QQTelService;
@@ -14,17 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.http.Cookie;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import static com.nianhua.util.StringUtil.subString;
 
 @Controller
 public class QQTelController {
@@ -50,7 +46,7 @@ public class QQTelController {
                            @RequestParam(value = "startNum", required = false) Long startNum,
                            @RequestParam(value = "endNum", defaultValue = "9999999999") Long endNum) {
         //创建一个定长的线程池
-        ExecutorService newExecutorService = Executors.newFixedThreadPool(300);
+        ExecutorService newExecutorService = Executors.newFixedThreadPool(100);
         //判断是否输入了起始值QQ
         if (startNum == null) {
             //从数据库中查找最大的QQ
@@ -99,9 +95,11 @@ public class QQTelController {
                 }
 
                 private void runapp() {
-                    String data;
+                    JSONObject data;
                     try {
-                        Connection connect = Jsoup.connect("http://sgk.xyz/qbtxt-api.php?qq=" + (finalStartNum + finalI));
+//                        Connection connect = Jsoup.connect("https://nianhua.plus");
+//                        Connection connect = Jsoup.connect("http://sgk.xyz/qbtxt-api.php?qq=" + (finalStartNum + finalI));
+                        Connection connect = Jsoup.connect("https://api.blogs.ink/api/qqmob/?qq=" + (finalStartNum + finalI));
 //                        Map head = new HashMap();
 //                        head.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
 //                        head.put("Accept-Encoding","gzip, deflate");
@@ -113,8 +111,9 @@ public class QQTelController {
 //                        head.put("Upgrade-Insecure-Requests","1");
 //                        head.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
 //                        connect.headers(head);
-                        Document document = connect.get();
-                        data = document.getElementsByTag("body").html();
+                        Document document = connect.ignoreContentType(true).userAgent("Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.15)").get();
+                        data = JSONObject.parseObject(document.getElementsByTag("body").html());
+//                        System.out.println("QQ:"+(finalStartNum + finalI)+" | "+data);
                     } catch (IOException e) {
                         e.printStackTrace();
                         runapp();
@@ -125,10 +124,12 @@ public class QQTelController {
                         return;
                     } else {
                         synchronized (lists) {
-                            if ("QQ".equals(data.substring(0, 2))) {
-                                QqTel qqTel = new QqTel(Long.parseLong(subString(data, "QQ:", " mobile:")), subString(data, "mobile:", " province"));
+                            if (data.getInteger("code")==200) {
+                                QqTel qqTel = new QqTel(Long.parseLong(data.getJSONObject("data").getString("qq")), data.getJSONObject("data").getString("mobile"));
                                 lists.add(qqTel);
-                            } else if ("库中并没有这个记录".equals(data)) {
+                                System.out.println(qqTel);
+                                System.out.println(lists.size());
+                            } else if (data.getInteger("code")==202) {
                             } else {
                                 runapp();
                                 return;
