@@ -16,8 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 @Controller
 public class QQTelController {
     private boolean flag = true;
+    private LocalTime oldTime = LocalTime.now();
+    private LocalTime newTime;
+    private Long num = 0L;
 
     @Autowired
     QQTelService qqTelService;
@@ -39,14 +47,16 @@ public class QQTelController {
      * size: 每一分段的大小，可不填，不同则默认为一百万
      * startNum: 开始QQ，可不填，不填则为数据库中最大的QQ
      * endNum: 爬取的最后一个QQ，可不填，不填则默认为10位数最大QQ(若自己填写则要大于startNum)
+     * thread: 线程池数量，默认50线程
      **/
     @ResponseBody
     @RequestMapping("/run")
     public ResultVo runGet(@RequestParam(value = "size", defaultValue = "1000000") Long size,
                            @RequestParam(value = "startNum", required = false) Long startNum,
-                           @RequestParam(value = "endNum", defaultValue = "9999999999") Long endNum) {
+                           @RequestParam(value = "endNum", defaultValue = "9999999999") Long endNum,
+                           @RequestParam(value = "thread", defaultValue = "50") int thread) {
         //创建一个定长的线程池
-        ExecutorService newExecutorService = Executors.newFixedThreadPool(100);
+        ExecutorService newExecutorService = Executors.newFixedThreadPool(thread);
         //判断是否输入了起始值QQ
         if (startNum == null) {
             //从数据库中查找最大的QQ
@@ -88,7 +98,7 @@ public class QQTelController {
                             }
                             if ((finalI + finalStartNum) < endNum) {
                                 System.out.println("我准备进入下个目标段了");
-                                runGet(finalSize, finalStartNum + finalSize, endNum);
+                                runGet(finalSize, finalStartNum + finalSize, endNum, thread);
                             }
                         }
                     }
@@ -97,25 +107,33 @@ public class QQTelController {
                 private void runapp() {
                     JSONObject data;
                     try {
-//                        Connection connect = Jsoup.connect("https://nianhua.plus");
-//                        Connection connect = Jsoup.connect("http://sgk.xyz/qbtxt-api.php?qq=" + (finalStartNum + finalI));
                         Connection connect = Jsoup.connect("https://api.blogs.ink/api/qqmob/?qq=" + (finalStartNum + finalI));
 //                        Map head = new HashMap();
-//                        head.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-//                        head.put("Accept-Encoding","gzip, deflate");
-//                        head.put("Accept-Language","zh-CN,zh;q=0.9");
-//                        head.put("Cache-Control","max-age=0");
-//                        head.put("Connection","keep-alive");
-//                        head.put("Cookie","__51vcke__JFGdTuLLGeB1FLjg=3faae609-8749-5426-b5e2-84779ee9d134; __51vuft__JFGdTuLLGeB1FLjg=1625620818835; _aihecong_chat_address=%7B%22city%22%3A%22%E6%B7%B1%E5%9C%B3%22%2C%22region%22%3A%22%E5%B9%BF%E4%B8%9C%22%2C%22country%22%3A%22%E4%B8%AD%E5%9B%BD%22%7D; __51uvsct__JFGdTuLLGeB1FLjg=4; _aihecong_chat_visitorCookie=%7B%22visitormark%22%3A%7B%22addtime%22%3A%222021-07-08T07%3A06%3A34.754Z%22%2C%22address%22%3A%7B%22city%22%3A%22%E6%B7%B1%E5%9C%B3%22%2C%22region%22%3A%22%E5%B9%BF%E4%B8%9C%22%2C%22country%22%3A%22%E4%B8%AD%E5%9B%BD%22%7D%2C%22device%22%3A%7B%22ip%22%3A%22113.90.30.70%22%2C%22height%22%3A%221080%22%2C%22width%22%3A%221920%22%2C%22system%22%3A%22Win10%22%2C%22browser%22%3A%22Chrome%2090.0.4430.212%22%2C%22type%22%3A%22Desktop%22%7D%2C%22utm%22%3A%7B%7D%2C%22mark%22%3A%7B%22sourceType%22%3A%22externallinks%22%2C%22entranceTitle%22%3A%22Q%E7%BB%91%E5%9C%A8%E7%BA%BF%E6%9F%A5%E8%AF%A2%22%2C%22entranceUrl%22%3A%22http%3A%2F%2Fsgk.xyz%2F%22%2C%22source%22%3A%22http%3A%2F%2F51.255.92.24%2F%22%7D%2C%22stays%22%3A%7B%7D%2C%22curFrequency%22%3A4%2C%22pageDepth%22%3A0%2C%22stayDuration%22%3A0%2C%22_id%22%3A%2260e6a3fa5e196b5b32e5ee1d%22%2C%22lasttime%22%3A%222021-07-08T06%3A50%3A39.218Z%22%2C%22channelId%22%3A%223Jho1R%22%2C%22numberId%22%3A18382%2C%22visitorId%22%3A%2260e557855e196b5b32cc1c25%22%2C%22__v%22%3A0%7D%2C%22last%22%3A%7B%22time%22%3A1625727995871%2C%22source%22%3A%22DirectEntry%22%2C%22entranceUrl%22%3A%22http%3A%2F%2Fsgk.xyz%2F%22%2C%22entranceTitle%22%3A%22Q%E7%BB%91%E5%9C%A8%E7%BA%BF%E6%9F%A5%E8%AF%A2%22%2C%22keyWord%22%3Anull%7D%2C%22visitormarkId%22%3A%2260e6a3fa5e196b5b32e5ee1d%22%2C%22visitorId%22%3A%2260e557855e196b5b32cc1c25%22%2C%22lastTime%22%3A1625728431957%7D");
-//                        head.put("Host","sgk.xyz");
-//                        head.put("Upgrade-Insecure-Requests","1");
-//                        head.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
+//                        head.put(":authority", "chaqbang.com");
+//                        head.put(":path", "/");
+//                        head.put(":scheme", "https");
+//                        head.put("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+//                        head.put("accept-encoding", "gzip, deflate, br");
+//                        head.put("accept-language", "zh-CN,zh;q=0.9");
+//                        head.put("cache-control", "max-age=0");
+//                        head.put("content-length", "12");
+//                        head.put("content-type", "application/x-www-form-urlencoded");
+//                        head.put("origin", "https://chaqbang.com");
+//                        head.put("referer", "https://chaqbang.com/");
+//                        head.put("sec-ch-ua", "\"Google Chrome\";v=\"95\", \"Chromium\";v=\"95\", \";Not A Brand\";v=\"99\"");
+//                        head.put("sec-ch-ua-mobile", "?0");
+//                        head.put("sec-ch-ua-platform", "\"Windows\"");
+//                        head.put("sec-fetch-dest", "document");
+//                        head.put("sec-fetch-mode", "navigate");
+//                        head.put("sec-fetch-site", "same-origin");
+//                        head.put("sec-fetch-user", "?1");
+//                        head.put("upgrade-insecure-requests", "1");
+//                        head.put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36");
 //                        connect.headers(head);
-                        Document document = connect.ignoreContentType(true).userAgent("Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.15)").get();
+//                        connect.data("number","10001");
+                        Document document = connect.ignoreContentType(true).get();
                         data = JSONObject.parseObject(document.getElementsByTag("body").html());
-//                        System.out.println("QQ:"+(finalStartNum + finalI)+" | "+data);
                     } catch (IOException e) {
-                        e.printStackTrace();
                         runapp();
                         return;
                     }
@@ -124,24 +142,26 @@ public class QQTelController {
                         return;
                     } else {
                         synchronized (lists) {
-                            if (data.getInteger("code")==200) {
+                            if (data.getInteger("code") == 200) {
                                 QqTel qqTel = new QqTel(Long.parseLong(data.getJSONObject("data").getString("qq")), data.getJSONObject("data").getString("mobile"));
                                 lists.add(qqTel);
-                                System.out.println(qqTel);
-                                System.out.println(lists.size());
-                            } else if (data.getInteger("code")==202) {
+                            } else if (data.getInteger("code") == 202) {
                             } else {
                                 runapp();
                                 return;
                             }
-                            if ((lists.size() % 500 == 0 && lists.size() != 0) || (finalI.longValue() == finalSize.longValue())) {
+                            if ((lists.size() % 100 == 0 && lists.size() != 0) || (finalI.longValue() == finalSize.longValue())) {
+                                newTime = LocalTime.now();
+                                Duration duration = Duration.between(oldTime, newTime);
                                 System.out.println("当前QQ:" + (finalStartNum + finalI) + " | 当前段目标QQ:" + (finalStartNum + finalSize) + " | 最终目标QQ:" + endNum);
+                                System.out.println("当前时间:" + new Timestamp(System.currentTimeMillis()) + " | 耗时:" + (duration.toMillis() / 1000.000) + "秒 | 查询了" + (finalI - num) + "个QQ");
+                                oldTime = newTime;
+                                num = finalI;
                                 try {
                                     qqTelService.addList(lists);
-                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "成功批量添加" + lists.size() + "条数据");
+                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "无重复数据，调用批量添加,成功批量添加" + lists.size() + "条数据");
                                     lists.clear();
                                 } catch (DuplicateKeyException e) {
-                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "有重复数据，调用单条添加");
                                     int i = 0;
                                     for (QqTel list : lists) {
                                         try {
@@ -151,13 +171,14 @@ public class QQTelController {
                                             i += qqTelService.add(list);
                                         }
                                     }
-                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "单条添加成功" + i + "条记录");
+                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "有重复数据，调用单条添加,单条添加成功" + i + "条记录");
                                     lists.clear();
                                 } catch (PersistenceException e) {
                                     qqTelService.addList(lists);
-                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "成功批量添加" + lists.size() + "条数据");
+                                    System.out.println("[" + Thread.currentThread().getName() + "]" + "无重复数据，调用批量添加,成功批量添加" + lists.size() + "条数据");
                                     lists.clear();
                                 }
+                                System.out.println("------------------------------------------------------------");
                             }
                         }
                     }

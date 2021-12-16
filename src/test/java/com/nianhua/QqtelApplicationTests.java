@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -23,7 +24,8 @@ class QqtelApplicationTests {
 
     @Test
     void contextLoads() throws IOException {
-
+        Document gbk = Jsoup.parse(new URL("https://chaqbang.com/").openStream(), "GBK", "https://chaqbang.com/");
+        System.out.println(gbk);
     }
 
 }
